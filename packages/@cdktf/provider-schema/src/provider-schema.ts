@@ -7,7 +7,6 @@ import { convertFiles } from "@cdktf/hcl2json";
 import {
   ConstructsMakerModuleTarget,
   ConstructsMakerProviderTarget,
-  ConstructsMakerTarget,
   Input,
   ModuleIndex,
   ModuleSchema,
@@ -28,13 +27,11 @@ export type ProviderHostname = string & { __type: "ProviderHostname" };
 export type ProviderNamespace = string & { __type: "ProviderNamespace" };
 export type ProviderName = string & { __type: "ProviderName" };
 
-export const parseFQPN = (f: FQPN, constraint?: ConstructsMakerTarget) => {
-  const [hostname, namespace, sourceName] = f.split("/");
-  const providedName = constraint?.name;
-  if (!sourceName && !providedName) {
+export const parseFQPN = (f: FQPN) => {
+  const [hostname, namespace, name] = f.split("/");
+  if (!name) {
     throw new Error(`can't handle ${f}`);
   }
-  const name = providedName ? providedName : sourceName;
   return { hostname, namespace, name } as {
     hostname: ProviderHostname;
     namespace: ProviderNamespace;

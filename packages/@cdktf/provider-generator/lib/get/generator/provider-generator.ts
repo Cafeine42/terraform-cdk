@@ -69,7 +69,6 @@ export class TerraformProviderGenerator {
   }
 
   public generate(providerConstraint: ConstructsMakerTarget) {
-    // Alter fqpn with provided name somehow?
     const fqpn = this.getProviderByConstraint(providerConstraint);
     if (!fqpn) {
       logger.debug(
@@ -108,7 +107,7 @@ export class TerraformProviderGenerator {
 
   public buildResourceModels(
     fqpn: FQPN,
-    providedName?: ProviderName
+    providerName?: ProviderName
   ): ResourceModel[] {
     const provider = this.schema.provider_schemas?.[fqpn];
     if (!provider) {
@@ -122,7 +121,7 @@ export class TerraformProviderGenerator {
           type,
           resource,
           "resource",
-          providedName
+          providerName ? providerName : parseFQPN(fqpn).name
         )
     );
 
@@ -133,7 +132,7 @@ export class TerraformProviderGenerator {
           `data_${type}`,
           resource,
           "data_source",
-          providedName
+          providerName ? providerName : parseFQPN(fqpn).name
         )
     );
 
@@ -153,29 +152,29 @@ export class TerraformProviderGenerator {
     providerVersion?: string,
     constraint?: ConstructsMakerTarget
   ) {
-    const { name } = parseFQPN(fqpn, constraint);
+    const name = constraint?.name
+      ? (constraint.name as ProviderName)
+      : parseFQPN(fqpn).name;
     const provider = this.schema.provider_schemas?.[fqpn];
     if (!provider) {
       throw new Error(`Can not find provider '${fqpn}' in schema`);
     }
 
     const files: string[] = [];
-    this.buildResourceModels(fqpn, constraint?.name as ProviderName).forEach(
-      (resourceModel) => {
-        if (constraint) {
-          resourceModel.providerVersionConstraint = constraint.version;
-          resourceModel.terraformProviderSource = constraint.source;
-        }
-        resourceModel.providerVersion = providerVersion;
-
-        if (resourceModel.structsRequireSharding) {
-          files.push(this.emitResourceWithComplexStruct(resourceModel));
-        } else {
-          files.push(this.emitResource(resourceModel));
-        }
-        this.emitResourceReadme(resourceModel);
+    this.buildResourceModels(fqpn, name).forEach((resourceModel) => {
+      if (constraint) {
+        resourceModel.providerVersionConstraint = constraint.version;
+        resourceModel.terraformProviderSource = constraint.source;
       }
-    );
+      resourceModel.providerVersion = providerVersion;
+
+      if (resourceModel.structsRequireSharding) {
+        files.push(this.emitResourceWithComplexStruct(resourceModel));
+      } else {
+        files.push(this.emitResource(resourceModel));
+      }
+      this.emitResourceReadme(resourceModel);
+    });
 
     if (provider.provider) {
       const providerResource = this.resourceParser.parse(
@@ -183,7 +182,7 @@ export class TerraformProviderGenerator {
         `provider`,
         provider.provider,
         "provider",
-        constraint?.name as ProviderName
+        name
       );
       if (constraint) {
         providerResource.providerVersionConstraint = constraint.version;

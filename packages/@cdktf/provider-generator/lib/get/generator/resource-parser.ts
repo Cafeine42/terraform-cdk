@@ -11,7 +11,7 @@ import {
   isNestedTypeAttribute,
   Schema,
 } from "@cdktf/commons";
-import { ProviderName, FQPN, parseFQPN } from "@cdktf/provider-schema";
+import { ProviderName, FQPN } from "@cdktf/provider-schema";
 import {
   ResourceModel,
   AttributeTypeModel,
@@ -124,17 +124,16 @@ class Parser {
     type: string,
     schema: Schema,
     terraformSchemaType: string,
-    providedName?: ProviderName
+    providerName: ProviderName
   ): ResourceModel {
-    const provider = providedName ? providedName : parseFQPN(fqpn).name;
     let baseName = type;
-    if (baseName.startsWith(`${provider}_`)) {
-      baseName = baseName.substr(provider.length + 1);
+    if (baseName.startsWith(`${providerName}_`)) {
+      baseName = baseName.substr(providerName.length + 1);
     }
 
     const isProvider = terraformSchemaType === "provider";
     if (isProvider) {
-      baseName = `${provider}_${baseName}`;
+      baseName = `${providerName}_${baseName}`;
       if (!("attributes" in schema.block)) {
         schema.block = {
           attributes: {},
@@ -155,16 +154,16 @@ class Parser {
     const className = this.uniqueClassName(toPascalCase(baseName));
     // avoid naming collision - see https://github.com/hashicorp/terraform-cdk/issues/299
     const configStructName = this.uniqueClassName(`${className}Config`);
-    const fileName = getFileName(provider, baseName);
+    const fileName = getFileName(providerName, baseName);
 
-    const filePath = `providers/${toSnakeCase(provider)}/${fileName}`;
+    const filePath = `providers/${toSnakeCase(providerName)}/${fileName}`;
     let attributes = this.renderAttributesForBlock(
       new Scope({
         name: baseName,
         isProvider,
         parent: isProvider
           ? undefined
-          : new Scope({ name: provider, isProvider: true }),
+          : new Scope({ name: providerName, isProvider: true }),
       }),
       schema.block
     );
@@ -666,7 +665,7 @@ export class ResourceParser {
     type: string,
     schema: Schema,
     terraformType: string,
-    providedName?: ProviderName
+    providerName: ProviderName
   ): ResourceModel {
     if (this.resources[type]) {
       return this.resources[type];
@@ -678,7 +677,7 @@ export class ResourceParser {
       type,
       schema,
       terraformType,
-      providedName
+      providerName
     );
     this.resources[type] = resource;
     return resource;
