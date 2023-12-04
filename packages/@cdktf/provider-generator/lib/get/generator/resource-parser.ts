@@ -123,9 +123,10 @@ class Parser {
     fqpn: FQPN,
     type: string,
     schema: Schema,
-    terraformSchemaType: string
+    terraformSchemaType: string,
+    providedName?: ProviderName
   ): ResourceModel {
-    const provider = parseFQPN(fqpn).name;
+    const provider = providedName ? providedName : parseFQPN(fqpn).name;
     let baseName = type;
     if (baseName.startsWith(`${provider}_`)) {
       baseName = baseName.substr(provider.length + 1);
@@ -664,14 +665,21 @@ export class ResourceParser {
     fqpn: FQPN,
     type: string,
     schema: Schema,
-    terraformType: string
+    terraformType: string,
+    providedName?: ProviderName
   ): ResourceModel {
     if (this.resources[type]) {
       return this.resources[type];
     }
 
     const parser = new Parser(this.uniqueClassnames);
-    const resource = parser.resourceFrom(fqpn, type, schema, terraformType);
+    const resource = parser.resourceFrom(
+      fqpn,
+      type,
+      schema,
+      terraformType,
+      providedName
+    );
     this.resources[type] = resource;
     return resource;
   }

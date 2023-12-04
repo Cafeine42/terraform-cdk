@@ -37,7 +37,7 @@ const isMatching = (
       throw new Error(`can't handle ${terraformSchemaName}`);
     }
 
-    return target.name === provider;
+    return target.name === provider || target.source === terraformSchemaName;
   }
 };
 
@@ -69,6 +69,7 @@ export class TerraformProviderGenerator {
   }
 
   public generate(providerConstraint: ConstructsMakerTarget) {
+    // Alter fqpn with provided name somehow?
     const fqpn = this.getProviderByConstraint(providerConstraint);
     if (!fqpn) {
       logger.debug(
@@ -105,7 +106,10 @@ export class TerraformProviderGenerator {
     await this.code.save(outdir);
   }
 
-  public buildResourceModels(fqpn: FQPN): ResourceModel[] {
+  public buildResourceModels(
+    fqpn: FQPN,
+    providedName?: ProviderName
+  ): ResourceModel[] {
     const provider = this.schema.provider_schemas?.[fqpn];
     if (!provider) {
       throw new Error(`Can not find provider '${fqpn}' in schema`);
@@ -113,12 +117,24 @@ export class TerraformProviderGenerator {
 
     const resources = Object.entries(provider.resource_schemas || {}).map(
       ([type, resource]) =>
-        this.resourceParser.parse(fqpn, type, resource, "resource")
+        this.resourceParser.parse(
+          fqpn,
+          type,
+          resource,
+          "resource",
+          providedName
+        )
     );
 
     const dataSources = Object.entries(provider.data_source_schemas || {}).map(
       ([type, resource]) =>
-        this.resourceParser.parse(fqpn, `data_${type}`, resource, "data_source")
+        this.resourceParser.parse(
+          fqpn,
+          `data_${type}`,
+          resource,
+          "data_source",
+          providedName
+        )
     );
 
     return ([] as ResourceModel[]).concat(...resources, ...dataSources);
@@ -137,34 +153,37 @@ export class TerraformProviderGenerator {
     providerVersion?: string,
     constraint?: ConstructsMakerTarget
   ) {
-    const { name } = parseFQPN(fqpn);
+    const { name } = parseFQPN(fqpn, constraint);
     const provider = this.schema.provider_schemas?.[fqpn];
     if (!provider) {
       throw new Error(`Can not find provider '${fqpn}' in schema`);
     }
 
     const files: string[] = [];
-    this.buildResourceModels(fqpn).forEach((resourceModel) => {
-      if (constraint) {
-        resourceModel.providerVersionConstraint = constraint.version;
-        resourceModel.terraformProviderSource = constraint.source;
-      }
-      resourceModel.providerVersion = providerVersion;
+    this.buildResourceModels(fqpn, constraint?.name as ProviderName).forEach(
+      (resourceModel) => {
+        if (constraint) {
+          resourceModel.providerVersionConstraint = constraint.version;
+          resourceModel.terraformProviderSource = constraint.source;
+        }
+        resourceModel.providerVersion = providerVersion;
 
-      if (resourceModel.structsRequireSharding) {
-        files.push(this.emitResourceWithComplexStruct(resourceModel));
-      } else {
-        files.push(this.emitResource(resourceModel));
+        if (resourceModel.structsRequireSharding) {
+          files.push(this.emitResourceWithComplexStruct(resourceModel));
+        } else {
+          files.push(this.emitResource(resourceModel));
+        }
+        this.emitResourceReadme(resourceModel);
       }
-      this.emitResourceReadme(resourceModel);
-    });
+    );
 
     if (provider.provider) {
       const providerResource = this.resourceParser.parse(
         fqpn,
         `provider`,
         provider.provider,
-        "provider"
+        "provider",
+        constraint?.name as ProviderName
       );
       if (constraint) {
         providerResource.providerVersionConstraint = constraint.version;
