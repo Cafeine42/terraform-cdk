@@ -40,7 +40,7 @@
     "codemaker": "1.92.0",
     "fs-extra": "8.1.0",
     "glob": "10.3.10",
-    "jsii-srcmak": "0.1.985"
+    "jsii-srcmak": "0.1.989"
   },
   "devDependencies": {
     "@types/deepmerge": "2.2.0",
