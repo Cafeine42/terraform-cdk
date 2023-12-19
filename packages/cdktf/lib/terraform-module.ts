@@ -7,7 +7,6 @@ import { deepMerge } from "./util";
 import { ITerraformDependable } from "./terraform-dependable";
 import { Token } from "./tokens";
 import { ref, dependable } from "./tfExpression";
-import { TerraformAsset } from "./terraform-asset";
 import { ITerraformIterator } from "./terraform-iterator";
 import { TerraformModuleAsset } from "./terraform-module-asset";
 
@@ -48,7 +47,9 @@ export abstract class TerraformModule
     if (!options.skipAssetCreationFromLocalModules) {
       if (options.source.startsWith("./") || options.source.startsWith("../")) {
         // Create an asset or reuse existing "singleton asset" for the local module for better TFC support
-        this.source = TerraformModuleAsset.of(scope).getAssetPathForModule(options.source);        
+        this.source = TerraformModuleAsset.of(scope).getAssetPathForModule(
+          options.source
+        );
       }
     }
 
