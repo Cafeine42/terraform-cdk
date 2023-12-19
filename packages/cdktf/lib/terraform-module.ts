@@ -9,6 +9,7 @@ import { Token } from "./tokens";
 import { ref, dependable } from "./tfExpression";
 import { TerraformAsset } from "./terraform-asset";
 import { ITerraformIterator } from "./terraform-iterator";
+import { TerraformModuleAsset } from "./terraform-module-asset";
 
 export interface TerraformModuleUserConfig {
   readonly providers?: (TerraformProvider | TerraformModuleProvider)[];
@@ -46,12 +47,8 @@ export abstract class TerraformModule
 
     if (!options.skipAssetCreationFromLocalModules) {
       if (options.source.startsWith("./") || options.source.startsWith("../")) {
-        // Create an asset for the local module for better TFC support
-        const asset = new TerraformAsset(scope, `local-module-${id}`, {
-          path: options.source,
-        });
-        // Despite being a relative path already, further indicate it as such for Terraform handling
-        this.source = `./${asset.path}`;
+        // Create an asset or reuse existing "singleton asset" for the local module for better TFC support
+        this.source = TerraformModuleAsset.of(scope).getAssetPathForModule(options.source);        
       }
     }
 
